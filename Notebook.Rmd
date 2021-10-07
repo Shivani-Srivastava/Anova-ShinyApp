@@ -1,0 +1,267 @@
+---
+title: "ANOVA shinyapp funcs"
+output:
+  html_document:
+    df_print: paged
+---
+
+This below is an ANOVA implementation in R.
+
+The shinyapp will be simple and tentatively has the following interface.
+
+### UI design
+
+* Main UI elements are:
+  - file input field for data as csv
+  - select metric Y variable(s) (variable selection enabled for multiple variables)
+  - select grouping X variable(s) (variable selection for multiple variables)
+  - select factor X variables (variable selection for multiple variables)
+  
+* the main output tabs will be as:
+  - Overview tab (with example datasets - telecom churn and mtcars)
+  - Data summary tab (view top 15 odd obs)
+  - ANOVA results tab
+  - Plots tab
+  
+Plan is to have 1 big function handle most of this, using IF statements.
+
+So let's get started.
+
+```{r setup_chunk}
+
+suppressPackageStartupMessages({
+  require(tidyverse)
+  require(car)
+  require(psych)
+  })
+
+```
+
+### Data Prep
+
+Function below requires data in a particular format, viz. `data.frame(y, X)` where y and X have been chosen by user. Can restrict max rows to 3k or 5k as needed.
+
+Below I demo data prep for the inbuilt `mtcars` dataset. 
+
+```{r ui_data}
+
+## --- UI for user-input needed below
+data = mtcars # input df is renamed 'data'
+y = data[,c(1,4)] # user selects Y variable(s), e.g., 'mpg', 'hp' here
+X = data[,c(2,6,9)] # user selects X variable(s), e.g.'cyl', 'wt', 'am'
+factor_vars = data[, c(2,9)] # user selects factor variables in X
+
+# ensure selected factor_vars are indeed factors.
+for (i0 in 1:ncol(X)){  
+    if (colnames(X)[i0] %in% colnames(factor_vars)){ X[,i0] = as.factor(X[,i0])}  
+    }
+
+head(X)
+
+# show tabular in summary tab below the DF slice
+if (ncol(factor_vars) > 1) {xref_tbl = table(factor_vars)}; 
+xref_tbl  # display this
+
+```
+
+## The ANOVA grand func
+
+Below I define an `anova_func` that takes care of 3 cases:
+
+* 1-way anova wherein there's one metric Y and one factor X
+
+* ANCOVA wherein there's one metric Y and multiple Xs
+
+* MANOVA wherein we have multiple Ys and multiple Xs
+
+There are 3 results of interest, common from each of the above cases.
+
+* the summary of the anova fit to be shown in ANOVA results tab
+* the summary of an OLS alternative fit, to also be shown in the ANOVA results tab
+* a plot of group means of the metric Y against groups in factor Xs, for plots tab
+
+Func is below, will walk through indiv cases later.
+
+```{r}
+
+## --- helper funcs
+ggplot_aov <- function(y, x, y_name, x_name){
+	p = ggplot(data.frame(y,x), aes(x=x, y=y)) +
+		geom_boxplot() + 
+		labs(x=x_name, y=y_name, color=x_name)  
+	return(p)
+}
+
+## -- ANOVA grand func
+
+anova_func <- function(y, X, factor_vars){  # These are user-selected from UI
+
+  # summary, summary.lm and plot are the 3 common outputs to be stored
+  output_store_list = vector(mode="list", length=3) 
+
+  if (ncol(y) == 1){
+  
+    if (ncol(X) == 1){
+      cat('\n\n ----- Single Y and X: Running 1-way ANOVA -----\n\n')
+      y = as.matrix(y)
+      fit_1way = aov(y ~ ., data = X)
+      y_name = colnames(y); x_name = colnames(X)
+      summary(fit_1way)  # show this as anova output
+      summary.lm(fit_1way)  # show this as OLS output
+      
+      # show this plot in plots tab
+      p = ggplot_aov(y, X, y_name, x_name)
+      p  # display this
+  
+      # use output_store_list obj below for output tabs
+      output_store_list[[1]] = summary(fit_1way)
+      output_store_list[[2]] = summary.lm(fit_1way)
+      output_store_list[[3]] = ggplot_aov(y, X, y_name, x_name)
+      
+      } else { # i.e., if ncol(X) >1
+        cat('\n\n ----- Single Y, many Xs: Running ANCOVA ------\n\n')
+        #y = as.matrix(y); head(y)
+        fit_ancova = aov(as.matrix(y) ~ ., data=X)
+        summary.lm(fit_ancova)  # show this as OLS result
+        
+        a0 = car::Anova(fit_ancova, type="III") # use this one for ancova
+        a0_df = as.data.frame(a0)
+        colsum0 = sum(a0$`Sum Sq`)
+        a0_df$percent_var_expl = 100*a0$`Sum Sq`/colsum0 
+        a0_df # show as ancova output
+        
+        # show below plots in plots tab
+        n1 = ncol(factor_vars); n1
+        plots_store_list = vector(mode="list", length=n1)          
+        for (i0 in 1:n1){
+          x = as.factor(factor_vars[,i0]); 
+          x_name = colnames(factor_vars)[i0]; x_name
+          y_name = colnames(y)[1]; y_name
+          plots_store_list[[i0]] = ggplot_aov(y, x, y_name, x_name)
+          plots_store_list[[i0]] # displaying the stored plot
+        } # i0 loop ends
+  
+      # use output_store_list obj below for output tabs
+      output_store_list[[1]] = a0_df
+      output_store_list[[2]] = summary.lm(fit_ancova)
+      output_store_list[[3]] = plots_store_list      
+        
+      } # if-else loop ends
+  
+    } else {  # i.e., if ncol(Y) >1
+    
+      cat('\n\n ----- Multiple Ys: Running MANOVA ------\n\n')
+      fit_manova = manova(as.matrix(y) ~., data=X)
+      summary(fit_manova) # show result
+
+      # plot boxplots for manova
+      n1 = ncol(factor_vars); n1
+      n2 = ncol(y); n2
+      plot_store_manova = vector(mode="list", length=n1*n2)
+      i0 = 0
+      for (i1 in 1:n2){
+          y1 = y[,i1]; y_name = colnames(y)[i1]
+          for (i2 in 1:n1){
+              x = as.factor(factor_vars[,i2])
+              x_name = colnames(factor_vars)[i2]
+              plot_store_manova[[i0 + 1]] = ggplot_aov(y1, x, y_name, x_name)
+              i0 = i0 + 1        } # i2 loop ends
+        
+        } # i1 loop ends
+      
+      # plot_store_manova[[2]] # check an example of the stored plots for display
+  
+      # use output_store_list obj below for output tabs
+      output_store_list[[1]] = summary(fit_manova)
+      output_store_list[[2]] = summary.lm(fit_manova)
+      output_store_list[[3]] = plot_store_manova      
+      
+      } # if-else loop ends
+  
+   return(output_store_list) 
+   } # func ends
+
+```
+
+## Testing 1-way anova on mtcars
+
+Below is a test-drive on mtcars. Let's try 1way anova first (1 metric Y and 1 factor X). Behold.
+ 
+```{r mtcars_1way}
+
+data = mtcars; # head(mtcars)
+
+y = as.data.frame(data[,1])
+X = as.data.frame(as.factor(data[,2])) # must be a factor in 1way anova
+colnames(y) = colnames(data)[1] # ensure colname is ame as in dataset
+colnames(X) = colnames(data)[2]
+factor_vars = X
+
+system.time({
+  output_list_mtcars = anova_func(y, X, factor_vars)
+})
+
+ output_list_mtcars[[1]]
+ output_list_mtcars[[2]]
+ output_list_mtcars[[3]] # shows some error but works when run line by line
+
+```
+ 
+## Testing ANCOVA on mtcars
+
+Am taking 1 metric Y ('mpg') and 3 Xs ('cyl', 'am', 'wt') of which 2 are factor and 1 is metric.
+
+Idea is to run ANCOVA and see the results.
+
+```{r ancova_mtcars}
+
+data = mtcars; # head(mtcars)
+
+y = as.data.frame(data[,1])
+X = as.data.frame(data[,c(2,6,9)]) 
+factor_vars = as.data.frame(data[, c(2,9)])
+
+# ensure colname is same as in dataset
+if (ncol(y)==1) {colnames(y) = colnames(data)[1]} 
+if (ncol(X)==1) {colnames(X) = colnames(data)[2]}
+if (ncol(factor_vars)==1) {colnames(factor_vars) = colnames(data)[2]}
+
+# ensure selected factor_vars are indeed factors.
+for (i0 in 1:ncol(X)){  
+    if (colnames(X)[i0] %in% colnames(factor_vars)){ X[,i0] = as.factor(X[,i0])}  
+    }
+
+# head(X)
+
+system.time({
+  output_list_mtcars = anova_func(y, X, factor_vars)
+})
+
+output_list_mtcars[[1]]
+output_list_mtcars[[2]]
+#output_list_mtcars[[3]]
+
+```
+
+
+
+Below is a test-drive on the iris dataset for a case with 2 Y variables and 1 X variable
+
+```{r iris_test_drive}
+## test drive
+data = iris
+y = data[,c(1,3)]; head(y)
+X = data.frame(data[,5]); head(X)
+x_name = colnames(data)[5]; x_name
+colnames(X) = x_name; head(X)
+factor_vars = X
+
+#system.time({ out_list = anova_func(y, X, factor_vars) })
+
+out_list
+
+```
+
+Dassit from me for now. Will elaborate when we speak next.
+
+Sudhir
