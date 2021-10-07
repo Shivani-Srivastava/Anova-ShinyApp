@@ -1,13 +1,4 @@
 
-if(!require("shiny")) {install.packages("shiny")}
-if(!require("pastecs")){install.packages("pastecs")}
-if(!require("foreign")){install.packages("foreign")}
-if(!require("tidyverse")){install.packages("tidyverse")}
-if(!require("psych")){install.packages("psych")}
-if(!require("ggpubr")){install.packages("ggpubr")}
-if(!require("ggplot2")){install.packages("ggplot2")}
-if(!require("DT")){install.packages("DT")}
-
 library(shiny)
 library(foreign)
 library(tidyverse)
@@ -15,7 +6,9 @@ library(psych)
 library(pastecs)
 library(tibble)
 library(ggpubr)
+library(DT)
 library(ggplot2)
+library(ggplotify)
 
 shinyServer(function(input, output) {
     
@@ -76,12 +69,10 @@ shinyServer(function(input, output) {
     })
     
     
-    
-    output$xref_tbl <- renderPrint(
+    output$Xref_Table <- renderPrint({
         {if (length(input$fxAttr) > 1) {xref_tbl = table(myData()[,input$fxAttr])}
             return(xref_tbl)}
-    
-    )
+    })
     
     output$OLSResult <- renderPrint({
         x <-input$xAttr
@@ -113,9 +104,6 @@ shinyServer(function(input, output) {
             if (length(input$xAttr) ==1){
                 cat('\n\n ----- Single Y and X: Running 1-way ANOVA -----\n\n')
                 
-                #n <- names(myData())
-                #f <- as.formula(paste(y, "~", paste(n[!n %in% y], collapse = " + ")))
-                
                 
                 x <-input$xAttr
                 y <- input$yAttr
@@ -134,9 +122,9 @@ shinyServer(function(input, output) {
                 x <-input$xAttr
                 y <- input$yAttr
                 fx <- input$fxAttr
-                #for (i1 in 0:length(fx)){fx[i1] <- paste('as.factor(', fx[i1], ')')}
+                
                 for (i0 in (which(x %in% fx == TRUE))){x[i0] <- paste('as.factor(',x[i0],')')}
-                #f <- as.formula(paste(y, "~", paste(fx[!fx %in% x], collapse = " + ")))
+                
                 f <- reformulate(termlabels = c(x), response = y)
                 
                 fit_ancova = aov(f, data = as.data.frame(myData()))
@@ -155,33 +143,27 @@ shinyServer(function(input, output) {
             x <-input$xAttr
             y <- input$yAttr
             fx <- input$fxAttr
-            #for (i1 in 0:length(fx)){fx[i1] <- paste('as.factor(', fx[i1], ')')}
             
             Y <- as.matrix(cbind(myData()[,y]))
             
             X = myData()[,x]
+            
             print(class(X))
+            
             for (i0 in (which(x %in% fx == TRUE))){X[,i0] <- as.factor(X[,i0])}
             
             myData1 = data.frame(Y,X)
             
-            #print(head(myData1))
             
-            #for (i0 in (which(x %in% fx == TRUE))){x[i0] <- paste('as.factor(',x[i0],')')}
-            
-            #f <- reformulate(termlabels = c(x))
-            #f <- str_split_fixed(f,'~',1)[2]
+            f <- reformulate(termlabels = c(x))
+            f <- str_split_fixed(f,'~',1)[2]
             
             #dependentV <- paste(colnames(Y), sep = "+")
             
             #f <- paste(paste(y, collapse = "+"),'~', paste(x, collapse = "+"))
             
-            #rhs = paste(x, collapse = "+")
-            #print(rhs)
-            #lhs = paste(input$yAttr, collapse = "+")
-            #ols = lm(paste(input$yAttr,"~", rhs , sep=""), data = mydata())
             
-            fit_manova = manova(Y ~ X, data = as.data.frame(X))
+            fit_manova = manova(Y ~ f, data = as.data.frame(X))
             
             Anova1 = summary(fit_manova)
             print(Anova1)
@@ -195,8 +177,9 @@ shinyServer(function(input, output) {
     output$Plot1 <- renderPlot({if(is.null(input$file)){return(NULL)} else{
         if (length(input$yAttr) == 1){
             if (length(input$xAttr) ==1){
+                
                 cat('\n\n ----- Single Y and X: Running 1-way ANOVA -----\n\n')
-                #y = as.matrix(input$yAttr)
+                
                 
                 x <- input$xAttr
                 y <- input$yAttr
@@ -214,7 +197,7 @@ shinyServer(function(input, output) {
                 cat('\n\n ----- Single Y, many Xs: Running ANCOVA ------\n\n')
                 
                 n1 = length(input$fxAttr)
-                library(ggpubr)
+                
                 plots_store_list = vector(mode="list", length=n1)          
                 
                 
@@ -222,39 +205,36 @@ shinyServer(function(input, output) {
                     x = input$fxAttr[i0] 
                     x_name = input$fxAttr[i0]
                     y_name = input$yAttr
-                    plots_store_list[[i0]] = ggplot(as.data.frame(myData()), aes(myData()[,x[i0]], myData()[,y])) +
-                    geom_boxplot() + labs(x=input$fxAttr[i0], y=input$yAttr)
+                    plots_store_list[[i0]] = as.grob(ggplot(as.data.frame(myData()), aes(x = myData()[,x], y = myData()[,y_name])) +
+                    geom_boxplot() + labs(x=input$fxAttr[i0], y=input$yAttr))
+                    
                 }
                 
-                plot_list <- ""
-                for (i2 in 1:n1){
-                    plot_list <- paste(plot_list, "plots_store_list[",i2,"]",",")
-                }
-                #ggarrange(plot_list)
-                plot_list1 = paste0(plot_list, "#"); plot_list1 
-                plot_list1 = str_replace_all(plot_list1, ",#", "") 
-                ggarrange(plot_list1)
+                ggarrange(plotlist = plots_store_list)
         }}
         else{
             cat('\n\n ----- Multiple Ys: Running MANOVA ------\n\n')
-            #fit_manova = manova(as.matrix(input$yAttr) ~., data=input$xAttr)
-            #Anova1 = summary(fit_manova)
             
             n1 = length(input$fxAttr)
             n2 = length(input$yAttr)
+            
             plot_store_manova = vector(mode="list", length=n1*n2)
+            
             i0 = 0
+            
             for (i1 in 1:n2){
-            y1 = y[,i1]; y_name = colnames(input$yAttr)[i1]
-            for (i2 in 1:n1){
-            x = as.factor(input$fxAttr[,i2])
-            x_name = colnames(input$fxAttr)[i2]
-            plot_store_manova[[i0 + 1]] = ggplot_aov(y1, x, y_name, x_name)
-            i0 = i0 + 1        } # i2 loop ends
+                y1 = y[,i1]; y_name = colnames(input$yAttr)[i1]
+                for (i2 in 1:n1){
+                    x = as.factor(input$fxAttr[,i2])
+                    x_name = colnames(input$fxAttr)[i2]
+                    plot_store_manova[[i0 + 1]] = as.grob(ggplot(as.data.frame(myData())), aes(x = myData()[,x], y = myData()[,y])
+                                                  + geom_boxplot() + labs(x=x_name, y=y_name))
+                
+                i0 = i0 + 1        } # i2 loop ends
             
         } # i1 loop ends
         
-        print(plot_store_manova)
+        ggarrange(plot_store_manova)
         }}
     })
     
