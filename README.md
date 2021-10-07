@@ -7,6 +7,6 @@ The app includes a downloadable dataset, mtcars.
 
 ANOVA - gives regression tables and graphs
 
-ANCOVA - gives regression tables; graphs generated but not displayed
+ANCOVA - gives regression tables; graphs generated and displayed
 
 MANOVA - errors in regression table; graphs generated but not displayed
