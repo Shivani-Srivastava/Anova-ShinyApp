@@ -67,7 +67,7 @@ as respondent id/name in csv file",align="justify"),
                      verbatimTextOutput('summaryX'), 
                      
                      h4(p("Cross Reference Table:")),
-                     verbatimTextOutput('xref_tbl')),
+                     verbatimTextOutput('Xref_Table')),
             
             tabPanel("Regression Results",
                      h4(p("Anova Results")),
