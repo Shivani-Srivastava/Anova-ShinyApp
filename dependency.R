@@ -1,3 +1,5 @@
+suppressPackageStartupMessages({
+
 if(!require("shiny")) {install.packages("shiny")}
 if(!require("pastecs")){install.packages("pastecs")}
 if(!require("foreign")){install.packages("foreign")}
@@ -17,3 +19,5 @@ library(psych)
 library(pastecs)
 library(ggplot2)
 library(ggpubr)
+  
+  })
