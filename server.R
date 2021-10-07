@@ -78,7 +78,7 @@ shinyServer(function(input, output) {
     
     
     output$xref_tbl <- renderPrint(
-        {if (length(input$fxAttr) > 1) {xref_tbl = table(input$fxAttr)}; 
+        {if (length(input$fxAttr) > 1) {xref_tbl = table(myData()[,input$fxAttr])}
             return(xref_tbl)}
     
     )
