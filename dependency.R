@@ -8,7 +8,7 @@ if(!require("psych")){install.packages("psych")}
 if(!require("ggpubr")){install.packages("ggpubr")}
 if(!require("ggplot2")){install.packages("ggplot2")}
 if(!require("DT")){install.packages("DT")}
-
+if(!require("ggplotify")){install.packages("ggplotify")}
 
 
 library(DT)
@@ -19,5 +19,6 @@ library(psych)
 library(pastecs)
 library(ggplot2)
 library(ggpubr)
+library(ggplotify)
   
   })
