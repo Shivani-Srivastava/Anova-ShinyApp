@@ -61,10 +61,12 @@ shinyServer(function(input, output) {
         
     })
     
-    output$summaryX <- renderPrint({
+    output$summaryX <- DT::renderDataTable({
         df <- myData()
         print("Summary for Selected X variable(s).")
-        summary(df[,input$xAttr])
+        #summary(df[,input$xAttr])
+        
+        DT::datatable(do.call(cbind, lapply(df[, input$xAttr], summary)))
         
     })
     
@@ -74,7 +76,7 @@ shinyServer(function(input, output) {
             return(xref_tbl)}
     })
     
-    output$OLSResult <- renderPrint({
+    output$OLSResult <- DT::renderDataTable({
         x <-input$xAttr
         y <- input$yAttr
         fx <- input$fxAttr
@@ -94,12 +96,12 @@ shinyServer(function(input, output) {
         
         fit_ols <- summary(lm(f, myData()))
         
-        print(fit_ols)
+        DT::datatable(round(fit_ols$coefficients,3))
     })
     
     
     
-    output$AnovaRes1 <- renderPrint({if(is.null(input$file)){return(print("File is null"))} else{
+    output$AnovaRes1 <- DT::renderDataTable({if(is.null(input$file)){return(print("File is null"))} else{
         if (length(input$yAttr) == 1){
             if (length(input$xAttr) ==1){
                 cat('\n\n ----- Single Y and X: Running 1-way ANOVA -----\n\n')
@@ -115,7 +117,7 @@ shinyServer(function(input, output) {
                 fit_1way = aov(f, data = as.data.frame(myData()))
                 Anova1 = summary(fit_1way)
                 
-                print(Anova1)
+                DT::datatable(Anova1$coefficients)
             }else{
                 cat('\n\n ----- Single Y, many Xs: Running ANCOVA ------\n\n')
                 
@@ -136,7 +138,7 @@ shinyServer(function(input, output) {
                 a0_df = round(a0_df,3)
                 Anova1 = a0_df 
                 
-                print(Anova1)
+                DT::datatable(Anova1)
             }
         }else{
             cat('\n\n ----- Multiple Ys: Running MANOVA ------\n\n')
@@ -205,7 +207,7 @@ shinyServer(function(input, output) {
                     x = input$fxAttr[i0] 
                     x_name = input$fxAttr[i0]
                     y_name = input$yAttr
-                    plots_store_list[[i0]] = as.grob(ggplot(as.data.frame(myData()), aes(x = myData()[,x], y = myData()[,y_name])) +
+                    plots_store_list[[i0]] = as.grob(ggplot(as.data.frame(myData()), aes(x = as.factor(myData()[,x]), y = myData()[,y_name])) +
                     geom_boxplot() + labs(x=input$fxAttr[i0], y=input$yAttr))
                     
                 }
@@ -220,21 +222,25 @@ shinyServer(function(input, output) {
             
             plot_store_manova = vector(mode="list", length=n1*n2)
             
+            
+            y <- input$yAttr
+            
+            
             i0 = 0
             
             for (i1 in 1:n2){
                 y1 = y[,i1]; y_name = colnames(input$yAttr)[i1]
                 for (i2 in 1:n1){
-                    x = as.factor(input$fxAttr[,i2])
-                    x_name = colnames(input$fxAttr)[i2]
-                    plot_store_manova[[i0 + 1]] = as.grob(ggplot(as.data.frame(myData())), aes(x = myData()[,x], y = myData()[,y])
+                    x = as.factor(myData()[,input$fxAttr[i2]])
+                    x_name = input$fxAttr[i2]
+                    plot_store_manova[[i0 + 1]] = as.grob(ggplot(as.data.frame(myData())), aes(x = as.factor(myData()[,x]), y = myData()[,y])
                                                   + geom_boxplot() + labs(x=x_name, y=y_name))
                 
                 i0 = i0 + 1        } # i2 loop ends
             
         } # i1 loop ends
         
-        ggarrange(plot_store_manova)
+        ggarrange(plotlist = plot_store_manova)
         }}
     })
     
