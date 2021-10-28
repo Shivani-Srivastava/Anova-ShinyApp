@@ -39,13 +39,6 @@ shinyUI(fluidPage(
   to different sources of variation. In its simplest form, ANOVA provides a 
   statistical test of whether two or more population means are equal, 
   and therefore generalizes the t-test beyond two means. "),
-                                 h4(p("How to Use this Shiny Application")),
-                                 p("This Shiny App requires one Data Input from you. To do so, 
-click on the Browse Button in the left panel, and upload the relevant CSV file.
-Note that this application can read only CSV file (comma delimited file), 
-so if you don't have that, first convert your data into csv format 
-and then proceed. Make sure you have top row as variable names and first column
-as respondent id/name in csv file",align="justify"),
                                  br(),
                                  h4(p("Download Sample Input File")),
                                  downloadButton('downloadData', 'Download Example file'),
@@ -64,16 +57,16 @@ as respondent id/name in csv file",align="justify"),
                      h4(p("Summary for Chosen Y variable(s):")),
                      verbatimTextOutput('summaryY'), 
                      h4(p("Summary for Chosen X Variable(s):")),
-                     verbatimTextOutput('summaryX'), 
+                     DT::dataTableOutput('summaryX'), 
                      
                      h4(p("Cross Reference Table:")),
                      verbatimTextOutput('Xref_Table')),
             
             tabPanel("Regression Results",
                      h4(p("Anova Results")),
-                     verbatimTextOutput('AnovaRes1'),
+                     DT::dataTableOutput('AnovaRes1'),
                      h4(p("OLS Results")),
-                     verbatimTextOutput('OLSResult')),
+                     DT::dataTableOutput('OLSResult')),
             
             tabPanel("Visualization"
                      ,plotOutput('Plot1')
