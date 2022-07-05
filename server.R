@@ -66,7 +66,7 @@ shinyServer(function(input, output) {
         print("Summary for Selected X variable(s).")
         #summary(df[,input$xAttr])
         
-        DT::datatable(do.call(cbind, lapply(df[, input$xAttr], summary)))
+        t(DT::datatable(do.call(cbind, lapply(df[, input$xAttr], summary))))
         
     })
     
@@ -96,7 +96,7 @@ shinyServer(function(input, output) {
         
         fit_ols <- summary(lm(f, myData()))
         
-        fit_ols <- t(fit_ols)
+        
         
         DT::datatable(round(fit_ols$coefficients,3))
     })
