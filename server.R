@@ -96,6 +96,8 @@ shinyServer(function(input, output) {
         
         fit_ols <- summary(lm(f, myData()))
         
+        fit_ols <- t(fit_ols)
+        
         DT::datatable(round(fit_ols$coefficients,3))
     })
     
