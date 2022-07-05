@@ -66,7 +66,7 @@ shinyServer(function(input, output) {
         print("Summary for Selected X variable(s).")
         #summary(df[,input$xAttr])
         
-        t(DT::datatable(do.call(cbind, lapply(df[, input$xAttr], summary))))
+        DT::datatable(do.call(cbind, lapply(df[, input$xAttr], summary)))
         
     })
     
