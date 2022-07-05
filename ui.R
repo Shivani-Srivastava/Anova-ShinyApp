@@ -40,6 +40,13 @@ shinyUI(fluidPage(
   statistical test of whether two or more population means are equal, 
   and therefore generalizes the t-test beyond two means. "),
                                  br(),
+                                 h4(p("About this Application")),
+                                 p("This appplication is a simple demonstration of ANOVA
+  and ANCOVA. It allows comparison between OLS regression results and the analysis of variances' results.
+  The results table for ANOVA/ANCOVA also displays the percentage variance
+  explained, which is an important measure. The last tab displays the visualization of the
+non-metric variables on boxplots."),
+                                 br(),
                                  h4(p("Download Sample Input File")),
                                  downloadButton('downloadData', 'Download Example file'),
                                  p("Please note that download will not work with RStudio interface. 
