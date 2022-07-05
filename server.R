@@ -42,7 +42,7 @@ shinyServer(function(input, output) {
     output$fxvarselect <- renderUI({
         if (identical(myData(), '') || identical(myData(),data.frame())) return(NULL)
         
-        selectInput("fxAttr", label = "Select X(Factor) variables",multiple = TRUE,
+        selectInput("fxAttr", label = "Select X(Non-Metric) variables",multiple = TRUE,
                     selectize = TRUE,
                     selected = setdiff(colnames(myData()),input$yAttr),choices = setdiff(colnames(myData()),input$yAttr)
         )
